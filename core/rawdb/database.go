@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/celo-org/celo-blockchain/ethdb/pebbledb"
 	"os"
 	"sync/atomic"
 	"time"
@@ -236,6 +237,31 @@ func NewLevelDBDatabase(file string, cache int, handles int, namespace string, r
 // freezer moving immutable chain segments into cold storage.
 func NewLevelDBDatabaseWithFreezer(file string, cache int, handles int, freezer string, namespace string, readonly bool) (ethdb.Database, error) {
 	kvdb, err := leveldb.New(file, cache, handles, namespace, readonly)
+	if err != nil {
+		return nil, err
+	}
+	frdb, err := NewDatabaseWithFreezer(kvdb, freezer, namespace, readonly)
+	if err != nil {
+		kvdb.Close()
+		return nil, err
+	}
+	return frdb, nil
+}
+
+// NewPebbleDBDatabase creates a persistent key-value database without a freezer
+// moving immutable chain segments into cold storage.
+func NewPebbleDBDatabase(file string, cache int, handles int, namespace string, readonly bool) (ethdb.Database, error) {
+	db, err := pebbledb.New(file, cache, handles, namespace, readonly)
+	if err != nil {
+		return nil, err
+	}
+	return NewDatabase(db), nil
+}
+
+// NewPebbleDBDatabaseWithFreezer creates a persistent key-value database with a
+// freezer moving immutable chain segments into cold storage.
+func NewPebbleDBDatabaseWithFreezer(file string, cache int, handles int, freezer string, namespace string, readonly bool) (ethdb.Database, error) {
+	kvdb, err := pebbledb.New(file, cache, handles, namespace, readonly)
 	if err != nil {
 		return nil, err
 	}

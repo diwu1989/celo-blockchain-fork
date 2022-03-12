@@ -19,6 +19,7 @@ require (
 	github.com/cespare/cp v0.1.0
 	github.com/cespare/xxhash/v2 v2.1.1
 	github.com/cloudflare/cloudflare-go v0.14.0
+	github.com/cockroachdb/pebble v0.0.0-20220311224846-910ce60578df
 	github.com/consensys/gnark-crypto v0.4.1-0.20210426202927-39ac3d4b3f1f
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea
@@ -48,7 +49,7 @@ require (
 	github.com/karalabe/usb v0.0.0-20190919080040-51dc0efba356
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/logrusorgru/aurora v2.0.3+incompatible
-	github.com/mattn/go-colorable v0.1.0
+	github.com/mattn/go-colorable v0.1.2
 	github.com/mattn/go-isatty v0.0.11
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416
@@ -66,7 +67,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.0.1-0.20181017060643-dbb3b84ba2ef
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210420205809-ac73e9fd8988
+	golang.org/x/sys v0.0.0-20210909193231-528a39cd75f3
 	golang.org/x/text v0.3.6 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
