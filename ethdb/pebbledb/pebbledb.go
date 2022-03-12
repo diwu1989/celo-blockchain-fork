@@ -145,6 +145,10 @@ func (db *Database) Close() error {
 func (db *Database) Has(key []byte) (bool, error) {
 	_, closer, err := db.db.Get(key)
 	if err != nil {
+		if err == pebble.ErrNotFound {
+			// mask not found as false
+			err = nil
+		}
 		return false, err
 	}
 	return true, closer.Close()
@@ -188,7 +192,7 @@ func (b batch) Put(key []byte, value []byte) error {
 	return nil
 }
 
-// Delete inserts the a key removal into the batch for later committing.
+// Delete inserts a key removal into the batch for later committing.
 func (b batch) Delete(key []byte) error {
 	b.b.Delete(key, pebble.NoSync)
 	b.size += len(key)
