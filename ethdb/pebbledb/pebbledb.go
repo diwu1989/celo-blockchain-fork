@@ -68,9 +68,7 @@ func New(file string, cache int, handles int, namespace string, readonly bool) (
 		options.MaxOpenFiles = handles
 		options.Cache = pebble.NewCache(int64(cache/2) * opt.MiB)
 		options.MemTableSize = cache / 2 * opt.MiB
-		if readonly {
-			options.ReadOnly = true
-		}
+		options.ReadOnly = readonly
 	})
 }
 
