@@ -154,9 +154,9 @@ func (db *Database) Get(key []byte) ([]byte, error) {
 // batch is a write-only leveldb batch that commits changes to its host database
 // when Write is called. A batch cannot be used concurrently.
 type batch struct {
-	db   *pebble.DB
-	size int
-	ops  []op
+	batch *pebble.Batch
+	size  int
+	ops   []op
 }
 
 type op struct {
@@ -167,6 +167,10 @@ type op struct {
 
 // Put inserts the given value into the batch for later committing.
 func (b batch) Put(key []byte, value []byte) error {
+	err := b.batch.Set(key, value, pebble.NoSync)
+	if err != nil {
+		return err
+	}
 	b.size += len(value)
 	b.ops = append(b.ops, op{
 		delete: false,
@@ -178,6 +182,10 @@ func (b batch) Put(key []byte, value []byte) error {
 
 // Delete inserts a key removal into the batch for later committing.
 func (b batch) Delete(key []byte) error {
+	err := b.batch.Delete(key, pebble.NoSync)
+	if err != nil {
+		return err
+	}
 	b.size += len(key)
 	b.ops = append(b.ops, op{
 		delete: true,
@@ -194,23 +202,12 @@ func (b batch) ValueSize() int {
 
 // Write flushes any accumulated data to disk.
 func (b batch) Write() error {
-	batch := b.db.NewBatch()
-	var err error
-	for _, op := range b.ops {
-		if op.delete {
-			err = batch.Delete(op.key, nil)
-		} else {
-			err = batch.Set(op.key, op.value, nil)
-		}
-		if err != nil {
-			return err
-		}
-	}
-	return batch.Commit(pebble.Sync)
+	return b.batch.Commit(pebble.Sync)
 }
 
 // Reset resets the batch for reuse.
 func (b batch) Reset() {
+	b.batch.Reset()
 	b.size = 0
 	b.ops = make([]op, 0)
 }
@@ -245,8 +242,8 @@ func (db *Database) Delete(key []byte) error {
 // database until a final write is called.
 func (db *Database) NewBatch() ethdb.Batch {
 	return &batch{
-		db:  db.db,
-		ops: make([]op, 0),
+		batch: db.db.NewBatch(),
+		ops:   make([]op, 0),
 	}
 }
 
