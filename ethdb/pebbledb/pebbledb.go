@@ -56,24 +56,24 @@ type Database struct {
 }
 
 func New(file string, cache int, handles int, namespace string, readonly bool) (*Database, error) {
-	return NewCustom(file, namespace, func(options *pebble.Options) {
-		// Ensure we have some minimal caching and file guarantees
-		if cache < minCache {
-			cache = minCache
-		}
-		if handles < minHandles {
-			handles = minHandles
-		}
-		// Set default options
-		options.MaxOpenFiles = handles
-		options.Cache = pebble.NewCache(int64(cache/2) * opt.MiB)
-		options.MemTableSize = cache / 2 * opt.MiB
-		options.ReadOnly = readonly
-	})
-}
+	// Set default options
+	options := &pebble.Options{}
 
-func NewCustom(file string, namespace string, customize func(options *pebble.Options)) (*Database, error) {
-	options := configureOptions(customize)
+	// Ensure we have some minimal caching and file guarantees
+	if cache < minCache {
+		cache = minCache
+	}
+	if handles < minHandles {
+		handles = minHandles
+	}
+	// Set default options
+	options.MaxOpenFiles = handles
+	options.MemTableSize = cache / 2 * opt.MiB
+	options.ReadOnly = readonly
+
+	options.Cache = pebble.NewCache(int64(cache) / 2 * opt.MiB)
+	defer options.Cache.Unref()
+
 	logger := log.New("database", file)
 	usedCache := options.Cache.MaxSize()
 	logCtx := []interface{}{"cache", common.StorageSize(usedCache), "handles", options.MaxOpenFiles}
@@ -110,16 +110,6 @@ func NewCustom(file string, namespace string, customize func(options *pebble.Opt
 	// Start up the metrics gathering and return
 	//go pdb.meter(metricsGatheringInterval)
 	return pdb, nil
-}
-
-func configureOptions(customizeFn func(options *pebble.Options)) *pebble.Options {
-	// Set default options
-	options := &pebble.Options{}
-	// Allow caller to make custom modifications to the options
-	if customizeFn != nil {
-		customizeFn(options)
-	}
-	return options
 }
 
 // Close stops the metrics collection, flushes any pending data to disk and closes
@@ -166,10 +156,9 @@ func (db *Database) Get(key []byte) ([]byte, error) {
 // batch is a write-only leveldb batch that commits changes to its host database
 // when Write is called. A batch cannot be used concurrently.
 type batch struct {
-	db   *pebble.DB
-	b    *pebble.Batch
-	ops  []op
-	size int
+	batch *pebble.Batch
+	size  int
+	ops   []op
 }
 
 type op struct {
@@ -180,7 +169,10 @@ type op struct {
 
 // Put inserts the given value into the batch for later committing.
 func (b batch) Put(key []byte, value []byte) error {
-	b.b.Set(key, value, nil)
+	err := b.batch.Set(key, value, nil)
+	if err != nil {
+		return err
+	}
 	b.size += len(value)
 	b.ops = append(b.ops, op{
 		delete: false,
@@ -192,7 +184,10 @@ func (b batch) Put(key []byte, value []byte) error {
 
 // Delete inserts a key removal into the batch for later committing.
 func (b batch) Delete(key []byte) error {
-	b.b.Delete(key, nil)
+	err := b.batch.Delete(key, nil)
+	if err != nil {
+		return err
+	}
 	b.size += len(key)
 	b.ops = append(b.ops, op{
 		delete: true,
@@ -209,12 +204,12 @@ func (b batch) ValueSize() int {
 
 // Write flushes any accumulated data to disk.
 func (b batch) Write() error {
-	return b.b.Commit(nil)
+	return b.batch.Commit(nil)
 }
 
 // Reset resets the batch for reuse.
 func (b batch) Reset() {
-	b.b.Reset()
+	b.batch.Reset()
 	b.size = 0
 	b.ops = make([]op, 0)
 }
@@ -249,9 +244,8 @@ func (db *Database) Delete(key []byte) error {
 // database until a final write is called.
 func (db *Database) NewBatch() ethdb.Batch {
 	return &batch{
-		db:  db.db,
-		b:   db.db.NewBatch(),
-		ops: make([]op, 0),
+		batch: db.db.NewBatch(),
+		ops:   make([]op, 0),
 	}
 }
 
