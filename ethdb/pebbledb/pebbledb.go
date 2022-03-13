@@ -148,12 +148,7 @@ func (db *Database) Get(key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	var result []byte
-	if len(dat) > 0 {
-		result = make([]byte, len(dat))
-		copy(result, dat)
-	}
-	return result, closer.Close()
+	return clone(dat), closer.Close()
 }
 
 // batch is a write-only leveldb batch that commits changes to its host database
@@ -179,8 +174,8 @@ func (b batch) Put(key []byte, value []byte) error {
 	b.size += len(value)
 	b.ops = append(b.ops, op{
 		delete: false,
-		key:    key,
-		value:  value,
+		key:    clone(key),
+		value:  clone(value),
 	})
 	return nil
 }
@@ -194,7 +189,7 @@ func (b batch) Delete(key []byte) error {
 	b.size += len(key)
 	b.ops = append(b.ops, op{
 		delete: true,
-		key:    key,
+		key:    clone(key),
 		value:  nil,
 	})
 	return nil
@@ -302,6 +297,16 @@ func bytesPrefixRange(prefix, start []byte) *util.Range {
 	r := util.BytesPrefix(prefix)
 	r.Start = append(r.Start, start...)
 	return r
+}
+
+// clone an array of bytes
+func clone(data []byte) []byte {
+	var result []byte
+	if len(data) > 0 {
+		result = make([]byte, len(data))
+		copy(result, data)
+	}
+	return result
 }
 
 // Stat returns a particular internal stat of the database.
