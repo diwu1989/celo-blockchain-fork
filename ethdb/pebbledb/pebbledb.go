@@ -314,5 +314,18 @@ func (db *Database) Stat(property string) (string, error) {
 // is treated as a key after all keys in the data store. If both is nil then it
 // will compact entire data store.
 func (db *Database) Compact(start []byte, limit []byte) error {
+	if start == nil || limit == nil {
+		iter := db.db.NewIter(nil)
+		var first, last []byte
+		if start == nil && iter.First() {
+			start = append(first, iter.Key()...)
+		}
+		if limit == nil && iter.Last() {
+			limit = append(last, iter.Key()...)
+		}
+		if err := iter.Close(); err != nil {
+			return err
+		}
+	}
 	return db.db.Compact(start, limit, true)
 }
