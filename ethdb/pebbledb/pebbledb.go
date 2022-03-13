@@ -148,8 +148,11 @@ func (db *Database) Get(key []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := make([]byte, len(dat))
-	copy(result, dat)
+	var result []byte
+	if len(dat) > 0 {
+		result = make([]byte, len(dat))
+		copy(result, dat)
+	}
 	return result, closer.Close()
 }
 
