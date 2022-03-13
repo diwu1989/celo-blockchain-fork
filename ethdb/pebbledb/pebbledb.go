@@ -25,7 +25,7 @@ const (
 
 	// minHandles is the minimum number of files handles to allocate to the open
 	// database files.
-	minHandles = 100
+	minHandles = 1000
 
 	// metricsGatheringInterval specifies the interval to retrieve leveldb database
 	// compaction, io and pause stats to report to the user.
